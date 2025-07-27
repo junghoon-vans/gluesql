@@ -56,6 +56,32 @@ pub enum Payload {
 }
 
 impl Payload {
+    /// Get the string representation of the payload type for JSON serialization.
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            Payload::Create => "CREATE TABLE",
+            Payload::DropTable(_) => "DROP TABLE",
+            Payload::Select { .. } => "SELECT",
+            Payload::SelectMap(_) => "SELECT",
+            Payload::ShowColumns(_) => "SHOW COLUMNS",
+            Payload::Insert(_) => "INSERT",
+            Payload::Update(_) => "UPDATE",
+            Payload::Delete(_) => "DELETE",
+            Payload::AlterTable => "ALTER TABLE",
+            Payload::CreateIndex => "CREATE INDEX",
+            Payload::DropIndex => "DROP INDEX",
+            Payload::StartTransaction => "BEGIN",
+            Payload::Commit => "COMMIT",
+            Payload::Rollback => "ROLLBACK",
+            Payload::DropFunction => "DROP FUNCTION",
+            Payload::ShowVariable(var) => match var {
+                PayloadVariable::Version(_) => "SHOW VERSION",
+                PayloadVariable::Tables(_) => "SHOW TABLES",
+                PayloadVariable::Functions(_) => "SHOW FUNCTIONS",
+            },
+        }
+    }
+
     /// Exports `select` payloads as an [`std::iter::Iterator`].
     ///
     /// The items of the Iterator are `HashMap<Column, Value>`, and they are borrowed by default.
