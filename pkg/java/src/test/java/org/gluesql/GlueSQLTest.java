@@ -48,7 +48,7 @@ class GlueSQLTest {
         }
     }
 
-    private int extractIntegerValue(Object obj) {
+    private int extractIntegerValue(Object obj) throws GlueSQLException {
         if (obj instanceof Number) {
             return ((Number) obj).intValue();
         } else if (obj instanceof java.util.Map) {
@@ -63,12 +63,12 @@ class GlueSQLTest {
                 return ((Number) value).intValue();
             }
         }
-        throw new RuntimeException("Cannot extract integer from: " + obj.getClass() + " = " + obj);
+        throw new GlueSQLException("Cannot extract integer from: " + obj.getClass() + " = " + obj);
     }
 
     @Test
     @DisplayName("Create in-memory database")
-    void testCreateMemoryDatabase() {
+    void testCreateMemoryDatabase() throws GlueSQLException {
         GlueSQL memoryDb = GlueSQL.newMemory();
         assertNotNull(memoryDb);
     }
@@ -184,7 +184,7 @@ class GlueSQLTest {
 
     @Test
     @DisplayName("Error handling for invalid SQL")
-    void testErrorHandling() {
+    void testErrorHandling() throws GlueSQLException {
         GlueSQL memoryDb = GlueSQL.newMemory();
         
         // Test invalid SQL syntax

@@ -23,10 +23,10 @@ public class GlueSQL {
      * 
      * @return GlueSQL instance with memory storage
      */
-    public static GlueSQL newMemory() {
+    public static GlueSQL newMemory() throws GlueSQLException {
         long handle = nativeNewMemory();
         if (handle == 0) {
-            throw new RuntimeException("Failed to create memory storage");
+            throw new GlueSQLException("Failed to create memory storage");
         }
         return new GlueSQL(handle);
     }
