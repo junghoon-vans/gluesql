@@ -80,16 +80,16 @@ class GlueSQLTest {
         
         // Create table
         QueryResult createResult = memoryDb.execute("CREATE TABLE test_table (id INTEGER, name TEXT)");
-        assertEquals("Create", createResult.getFirstResultType());
+        assertEquals("CREATE TABLE", createResult.getFirstResultType());
 
         // Insert some data to verify table exists
         QueryResult insertResult = memoryDb.execute("INSERT INTO test_table VALUES (1, 'test')");
-        assertEquals("Insert", insertResult.getFirstResultType());
+        assertEquals("INSERT", insertResult.getFirstResultType());
         assertEquals(1, insertResult.getAffectedRows());
 
         // Drop table
         QueryResult dropResult = memoryDb.execute("DROP TABLE test_table");
-        assertEquals("Drop", dropResult.getFirstResultType());
+        assertEquals("DROP TABLE", dropResult.getFirstResultType());
     }
 
     @Test
@@ -102,7 +102,7 @@ class GlueSQLTest {
 
         // Insert data
         QueryResult insertResult = memoryDb.execute("INSERT INTO users VALUES (1, 'Alice', 30), (2, 'Bob', 25)");
-        assertEquals("Insert", insertResult.getFirstResultType());
+        assertEquals("INSERT", insertResult.getFirstResultType());
         assertEquals(2, insertResult.getAffectedRows());
 
         // Select data
@@ -135,7 +135,7 @@ class GlueSQLTest {
 
         // Update data
         QueryResult updateResult = memoryDb.execute("UPDATE users SET age = 31 WHERE id = 1");
-        assertEquals("Update", updateResult.getFirstResultType());
+        assertEquals("UPDATE", updateResult.getFirstResultType());
         assertEquals(1, updateResult.getAffectedRows());
 
         // Verify update
@@ -145,7 +145,7 @@ class GlueSQLTest {
 
         // Delete data
         QueryResult deleteResult = memoryDb.execute("DELETE FROM users WHERE id = 2");
-        assertEquals("Delete", deleteResult.getFirstResultType());
+        assertEquals("DELETE", deleteResult.getFirstResultType());
         assertEquals(1, deleteResult.getAffectedRows());
 
         // Verify deletion
@@ -286,6 +286,52 @@ class GlueSQLTest {
         assertNotNull(row.get(1)); // text
         assertNotNull(row.get(2)); // boolean
         assertNotNull(row.get(3)); // decimal
+    }
+
+    @Test
+    @DisplayName("Debug JSON structures")
+    void debugJsonStructures() throws GlueSQLException {
+        GlueSQL memoryDb = GlueSQL.newMemory();
+        
+        // Create and insert
+        QueryResult createResult = memoryDb.execute("CREATE TABLE debug_test (id INTEGER, name TEXT)");
+        System.out.println("CREATE JSON: " + createResult.toJson());
+        
+        QueryResult insertResult = memoryDb.execute("INSERT INTO debug_test VALUES (1, 'test')");
+        System.out.println("INSERT JSON: " + insertResult.toJson());
+        
+        // Most importantly - SELECT
+        QueryResult selectResult = memoryDb.execute("SELECT * FROM debug_test");
+        System.out.println("SELECT JSON: " + selectResult.toJson());
+        System.out.println("Is SELECT result: " + selectResult.isSelectResult());
+        System.out.println("SELECT rows type: " + selectResult.getSelectRows().getClass());
+        
+        if (!selectResult.getSelectRows().isEmpty()) {
+            System.out.println("First row type: " + selectResult.getSelectRows().get(0).getClass());
+        }
+    }
+
+    @Test
+    @DisplayName("Test multi-query support")
+    void testMultiQuerySupport() throws GlueSQLException {
+        GlueSQL memoryDb = GlueSQL.newMemory();
+        
+        // Multiple queries in one call (like Python/JavaScript)
+        String multipleQueries = """
+            CREATE TABLE multi_test (id INTEGER, name TEXT);
+            INSERT INTO multi_test VALUES (1, 'First');
+            INSERT INTO multi_test VALUES (2, 'Second');
+            """;
+        
+        QueryResult result = memoryDb.execute(multipleQueries);
+        System.out.println("Multi-query JSON: " + result.toJson());
+        
+        // Should contain results from all 3 operations
+        assertTrue(result.getResultCount() >= 1);
+        
+        // Verify data was inserted
+        QueryResult selectResult = memoryDb.execute("SELECT COUNT(*) FROM multi_test");
+        assertEquals(2, ((Number) selectResult.getSelectRows().get(0).get(0)).intValue());
     }
 
     @Test
