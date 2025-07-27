@@ -30,3 +30,8 @@
 **/*.rs.bk
 
 __pycache__
+
+# Java build artifacts
+/pkg/java/build/
+/pkg/java/.gradle/
+/pkg/java/target/
