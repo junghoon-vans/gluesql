@@ -14,7 +14,7 @@ mod storages;
 
 use {
     error::GlueSQLError,
-    payload::{JavaPayload, convert_payload},
+    payload::convert,
     storages::{
         JavaMemoryStorage, JavaJsonStorage, JavaSledStorage, 
         JavaSharedMemoryStorage, JavaStorageEngine,
@@ -48,32 +48,32 @@ impl JavaGlue {
         let rt = Self::runtime();
         
         rt.block_on(async {
-            let statements = parse(&sql)
-                .map_err(|e| GlueSQLError::new(e.to_string()))?;
-            
-            // Take the first statement for now (like other bindings)
-            let statement = statements.into_iter()
-                .next()
-                .ok_or_else(|| GlueSQLError::new("No SQL statement found".to_string()))?;
-            
-            let statement = translate(&statement)
+            let queries = parse(&sql)
                 .map_err(|e| GlueSQLError::new(e.to_string()))?;
 
-            let mut storage = self.storage.lock().unwrap();
-            let result = match &mut *storage {
-                JavaStorageEngine::Memory(storage) => execute!(storage, &statement),
-                JavaStorageEngine::Json(storage) => execute!(storage, &statement),
-                JavaStorageEngine::Sled(storage) => execute!(storage, &statement),
-                JavaStorageEngine::SharedMemory(storage) => execute!(storage, &statement),
-            };
+            let mut payloads = Vec::new();
+            
+            for query in queries.iter() {
+                let statement = translate(query)
+                    .map_err(|e| GlueSQLError::new(e.to_string()))?;
 
-            match result {
-                Ok(payload) => {
-                    let java_payloads = vec![JavaPayload { payload }];
-                    convert_payload(java_payloads).map_err(|e| GlueSQLError::new(e.to_string()))
+                let mut storage = self.storage.lock().unwrap();
+                let result = match &mut *storage {
+                    JavaStorageEngine::Memory(storage) => execute!(storage, &statement),
+                    JavaStorageEngine::Json(storage) => execute!(storage, &statement),
+                    JavaStorageEngine::Sled(storage) => execute!(storage, &statement),
+                    JavaStorageEngine::SharedMemory(storage) => execute!(storage, &statement),
+                };
+
+                match result {
+                    Ok(payload) => {
+                        payloads.push(payload);
+                    }
+                    Err(e) => return Err(GlueSQLError::new(e.to_string()))
                 }
-                Err(e) => Err(GlueSQLError::new(e.to_string()))
             }
+
+            convert(payloads).map_err(|e| GlueSQLError::new(e.to_string()))
         })
     }
 }

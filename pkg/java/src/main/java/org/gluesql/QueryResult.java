@@ -8,7 +8,7 @@ import java.util.Map;
 
 /**
  * Represents the result of a GlueSQL query execution.
- * 
+ * <p>
  * This class provides convenient access to query results without requiring
  * users to manually parse JSON responses.
  */
@@ -93,7 +93,8 @@ public class QueryResult {
      * @return true if the first result is a SELECT result
      */
     public boolean isSelectResult() {
-        return "Select".equals(getFirstResultType());
+        String type = getFirstResultType();
+        return "Select".equals(type) || "SELECT".equals(type);
     }
 
     /**
@@ -108,11 +109,32 @@ public class QueryResult {
         }
         
         Object rows = results.get(0).get("rows");
-        if (rows instanceof List) {
-            return (List<List<Object>>) rows;
+        if (!(rows instanceof List)) {
+            return new ArrayList<>();
         }
         
-        return new ArrayList<>();
+        List<?> rowsList = (List<?>) rows;
+        List<List<Object>> result = new ArrayList<>();
+        
+        for (Object row : rowsList) {
+            if (row instanceof Map) {
+                // Convert object format {id:1, name:"test"} to array format [1, "test"]
+                Map<String, Object> rowMap = (Map<String, Object>) row;
+                List<String> labels = getSelectLabels();
+                List<Object> rowArray = new ArrayList<>();
+                
+                // Preserve the order of columns according to labels
+                for (String label : labels) {
+                    rowArray.add(rowMap.get(label));
+                }
+                result.add(rowArray);
+            } else if (row instanceof List) {
+                // Already in array format
+                result.add((List<Object>) row);
+            }
+        }
+        
+        return result;
     }
 
     /**
@@ -147,15 +169,24 @@ public class QueryResult {
         Map<String, Object> firstResult = results.get(0);
         String type = (String) firstResult.get("type");
         
-        if ("Insert".equals(type)) {
-            Object insertedRows = firstResult.get("inserted_rows");
-            return insertedRows instanceof Number ? ((Number) insertedRows).intValue() : 0;
-        } else if ("Update".equals(type)) {
-            Object updatedRows = firstResult.get("updated_rows");
-            return updatedRows instanceof Number ? ((Number) updatedRows).intValue() : 0;
-        } else if ("Delete".equals(type)) {
-            Object deletedRows = firstResult.get("deleted_rows");
-            return deletedRows instanceof Number ? ((Number) deletedRows).intValue() : 0;
+        if ("Insert".equals(type) || "INSERT".equals(type)) {
+            Object affectedRows = firstResult.get("affected");
+            if (affectedRows == null) {
+                affectedRows = firstResult.get("inserted_rows");
+            }
+            return affectedRows instanceof Number ? ((Number) affectedRows).intValue() : 0;
+        } else if ("Update".equals(type) || "UPDATE".equals(type)) {
+            Object affectedRows = firstResult.get("affected");
+            if (affectedRows == null) {
+                affectedRows = firstResult.get("updated_rows");
+            }
+            return affectedRows instanceof Number ? ((Number) affectedRows).intValue() : 0;
+        } else if ("Delete".equals(type) || "DELETE".equals(type)) {
+            Object affectedRows = firstResult.get("affected");
+            if (affectedRows == null) {
+                affectedRows = firstResult.get("deleted_rows");
+            }
+            return affectedRows instanceof Number ? ((Number) affectedRows).intValue() : 0;
         }
         
         return 0;

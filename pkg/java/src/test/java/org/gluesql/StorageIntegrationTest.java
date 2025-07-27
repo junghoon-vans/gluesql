@@ -105,14 +105,14 @@ class StorageIntegrationTest {
                 "value DECIMAL, " +
                 "active BOOLEAN" +
                 ")");
-        assertEquals("Create", createResult.getFirstResultType());
+        assertEquals("CREATE TABLE", createResult.getFirstResultType());
 
         // Insert test data
         QueryResult insertResult = db.execute("INSERT INTO storage_test VALUES " +
                 "(1, 'First Item', 100.50, true), " +
                 "(2, 'Second Item', 200.75, false), " +
                 "(3, 'Third Item', 300.25, true)");
-        assertEquals("Insert", insertResult.getFirstResultType());
+        assertEquals("INSERT", insertResult.getFirstResultType());
         assertEquals(3, insertResult.getAffectedRows());
 
         // Test SELECT with WHERE clause
@@ -130,7 +130,7 @@ class StorageIntegrationTest {
 
         // Test UPDATE
         QueryResult updateResult = db.execute("UPDATE storage_test SET value = 150.00 WHERE id = 1");
-        assertEquals("Update", updateResult.getFirstResultType());
+        assertEquals("UPDATE", updateResult.getFirstResultType());
         assertEquals(1, updateResult.getAffectedRows());
 
         // Verify update
@@ -149,7 +149,7 @@ class StorageIntegrationTest {
 
         // Test DELETE
         QueryResult deleteResult = db.execute("DELETE FROM storage_test WHERE id = 2");
-        assertEquals("Delete", deleteResult.getFirstResultType());
+        assertEquals("DELETE", deleteResult.getFirstResultType());
         assertEquals(1, deleteResult.getAffectedRows());
 
         // Verify deletion
