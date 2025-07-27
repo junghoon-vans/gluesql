@@ -1,0 +1,109 @@
+plugins {
+    id 'java-library'
+    id 'maven-publish'
+}
+
+group = 'org.gluesql'
+version = '0.0.1-SNAPSHOT'
+sourceCompatibility = '17'
+targetCompatibility = '17'
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    implementation 'com.fasterxml.jackson.core:jackson-databind:2.15.2'
+    
+    testImplementation 'org.junit.jupiter:junit-jupiter:5.9.3'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+sourceSets {
+    main {
+        java {
+            srcDirs = ['src/main/java']
+        }
+        resources {
+            srcDirs = ['src/main/resources']
+        }
+    }
+    test {
+        java {
+            srcDirs = ['src/test/java']
+        }
+    }
+}
+
+test {
+    useJUnitPlatform()
+    
+    // Set java.library.path to include our target/native/release directory
+    systemProperty 'java.library.path', "${project.projectDir}/target/native/release"
+}
+
+// Task to build the native Rust library
+task buildRustLibrary(type: Exec) {
+    description = 'Build the Rust native library using Cargo'
+    group = 'build'
+    
+    workingDir = project.projectDir
+    commandLine = ['cargo', 'build', '--release', '--target-dir', 'target/native']
+    
+    inputs.files fileTree(dir: 'src', include: '**/*.rs')
+    inputs.file 'Cargo.toml'
+    
+    outputs.dir 'target/native/release'
+}
+
+// Make the Java compilation and test depend on the native library
+compileJava.dependsOn buildRustLibrary
+processResources.dependsOn buildRustLibrary
+test.dependsOn buildRustLibrary
+
+jar {
+    archiveBaseName = 'gluesql-java'
+    
+    manifest {
+        attributes(
+            'Implementation-Title': 'GlueSQL Java Bindings',
+            'Implementation-Version': project.version,
+            'Implementation-Vendor': 'GlueSQL'
+        )
+    }
+}
+
+publishing {
+    publications {
+        maven(MavenPublication) {
+            from components.java
+            
+            pom {
+                name = 'GlueSQL Java Bindings'
+                description = 'Java bindings for GlueSQL - an open-source SQL database engine'
+                url = 'https://github.com/gluesql/gluesql'
+                
+                licenses {
+                    license {
+                        name = 'Apache License 2.0'
+                        url = 'https://www.apache.org/licenses/LICENSE-2.0'
+                    }
+                }
+                
+                developers {
+                    developer {
+                        id = 'gluesql'
+                        name = 'GlueSQL Team'
+                        email = 'contact@gluesql.org'
+                    }
+                }
+                
+                scm {
+                    connection = 'scm:git:git://github.com/gluesql/gluesql.git'
+                    developerConnection = 'scm:git:ssh://github.com:gluesql/gluesql.git'
+                    url = 'https://github.com/gluesql/gluesql'
+                }
+            }
+        }
+    }
+}
