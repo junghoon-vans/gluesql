@@ -15,9 +15,26 @@ pub fn convert(payloads: Vec<Payload>) -> JsValue {
 }
 
 fn convert_payload(payload: Payload) -> Json {
+    let type_str = payload.as_str();
+
     match payload {
-        Payload::Create => json!({ "type": "CREATE TABLE" }),
-        Payload::DropTable(num) => json!({ "type": "DROP TABLE", "affected": num }),
+        Payload::Create
+        | Payload::AlterTable
+        | Payload::CreateIndex
+        | Payload::DropIndex
+        | Payload::StartTransaction
+        | Payload::Commit
+        | Payload::Rollback
+        | Payload::DropFunction => json!({ "type": $type_str }),
+
+        Payload::DropTable(num)
+        | Payload::Insert(num)
+        | Payload::Update(num)
+        | Payload::Delete(num) => json!({
+            "type": $type_str,
+            "affected": num
+        }),
+
         Payload::Select { labels, rows } => {
             let rows = rows
                 .into_iter()
@@ -38,7 +55,7 @@ fn convert_payload(payload: Payload) -> Json {
                 .collect();
 
             json!({
-                "type": "SELECT",
+                "type": $type_str,
                 "rows": Json::Array(rows),
             })
         }
@@ -60,7 +77,7 @@ fn convert_payload(payload: Payload) -> Json {
                 .collect();
 
             json!({
-                "type": "SELECT",
+                "type": $type_str,
                 "rows": Json::Array(rows),
             })
         }
@@ -76,44 +93,25 @@ fn convert_payload(payload: Payload) -> Json {
                 .collect();
 
             json!({
-                "type": "SHOW COLUMNS",
+                "type": $type_str,
                 "columns": Json::Array(columns),
             })
         }
-        Payload::Insert(num) => json!({
-            "type": "INSERT",
-            "affected": num
-        }),
-        Payload::Update(num) => json!({
-            "type": "UPDATE",
-            "affected": num
-        }),
-        Payload::Delete(num) => json!({
-            "type": "DELETE",
-            "affected": num
-        }),
-        Payload::AlterTable => json!({ "type": "ALTER TABLE" }),
-        Payload::CreateIndex => json!({ "type": "CREATE INDEX" }),
-        Payload::DropIndex => json!({ "type": "DROP INDEX" }),
-        Payload::StartTransaction => json!({ "type": "BEGIN" }),
-        Payload::Commit => json!({ "type": "COMMIT" }),
-        Payload::Rollback => json!({ "type": "ROLLBACK" }),
         Payload::ShowVariable(PayloadVariable::Version(version)) => {
             json!({
-                "type": "SHOW VERSION",
+                "type": $type_str,
                 "version": version
             })
         }
         Payload::ShowVariable(PayloadVariable::Tables(table_names)) => {
             json!({
-                "type": "SHOW TABLES",
+                "type": $type_str,
                 "tables": table_names
             })
         }
-        Payload::DropFunction => json!({ "type": "DROP FUNCTION" }),
         Payload::ShowVariable(PayloadVariable::Functions(function_names)) => {
             json!({
-                "type": "SHOW FUNCTIONS",
+                "type": $type_str,
                 "functions": function_names
             })
         }
