@@ -22,6 +22,7 @@ use {
     },
     futures::stream::{StreamExt, TryStreamExt},
     serde::{Deserialize, Serialize},
+    serde_json::{Value as Json, json},
     std::{collections::HashMap, env::var, fmt::Debug, rc::Rc},
     thiserror::Error as ThisError,
 };
@@ -79,6 +80,111 @@ impl Payload {
                 PayloadVariable::Tables(_) => "SHOW TABLES",
                 PayloadVariable::Functions(_) => "SHOW FUNCTIONS",
             },
+        }
+    }
+
+    /// Converts the payload to a JSON representation.
+    pub fn as_json(&self) -> Json {
+        let type_str = self.as_str();
+
+        match self {
+            Payload::Create
+            | Payload::AlterTable
+            | Payload::CreateIndex
+            | Payload::DropIndex
+            | Payload::StartTransaction
+            | Payload::Commit
+            | Payload::Rollback
+            | Payload::DropFunction => json!({ "type": type_str }),
+
+            Payload::DropTable(num)
+            | Payload::Insert(num)
+            | Payload::Update(num)
+            | Payload::Delete(num) => json!({
+                "type": type_str,
+                "affected": num
+            }),
+
+            Payload::Select { labels, rows } => {
+                let rows = rows
+                    .into_iter()
+                    .map(|values| {
+                        let row = labels
+                            .iter()
+                            .zip(values.into_iter())
+                            .map(|(label, value)| {
+                                let key = label.to_owned();
+                                let value = serde_json::to_value(value).unwrap_or_default();
+
+                                (key.to_owned(), value)
+                            })
+                            .collect();
+
+                        Json::Object(row)
+                    })
+                    .collect();
+
+                json!({
+                    "type": type_str,
+                    "rows": Json::Array(rows),
+                })
+            }
+            Payload::SelectMap(rows) => {
+                let rows = rows
+                    .into_iter()
+                    .map(|row| {
+                        let row = row
+                            .into_iter()
+                            .map(|(key, value)| {
+                                let value = serde_json::to_value(value).unwrap_or_default();
+
+                                (key.to_owned(), value)
+                            })
+                            .collect();
+
+                        Json::Object(row)
+                    })
+                    .collect();
+
+                json!({
+                    "type": type_str,
+                    "rows": Json::Array(rows),
+                })
+            }
+            Payload::ShowColumns(columns) => {
+                let columns = columns
+                    .into_iter()
+                    .map(|(name, data_type)| {
+                        json!({
+                            "name": name,
+                            "type": data_type.to_string(),
+                        })
+                    })
+                    .collect();
+
+                json!({
+                    "type": type_str,
+                    "columns": Json::Array(columns),
+                })
+            }
+            Payload::ShowVariable(PayloadVariable::Version(version)) => {
+                json!({
+                    "type": type_str,
+                    "version": version
+                })
+            }
+            Payload::ShowVariable(PayloadVariable::Tables(table_names)) => {
+                json!({
+                    "type": type_str,
+                    "tables": table_names
+                })
+            }
+            Payload::ShowVariable(PayloadVariable::Functions(function_names)) => {
+                json!({
+                    "type": type_str,
+                    "functions": function_names
+                })
+            }
         }
     }
 
