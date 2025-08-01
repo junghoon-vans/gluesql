@@ -6,7 +6,7 @@ package org.gluesql;
  * GlueSQL is an open-source SQL database engine written in Rust that supports
  * multiple storage backends and provides SQL query capabilities.
  */
-public class GlueSQL {
+public class GlueSQL implements AutoCloseable {
     
     static {
         System.loadLibrary("gluesql_java");
@@ -104,23 +104,13 @@ public class GlueSQL {
 
     /**
      * Close the database and free native resources.
-     */
-    public void close() {
-        if (nativeHandle != 0) {
-            // Note: In a full implementation, we would add a native method to free the handle
-            nativeHandle = 0;
-        }
-    }
-
-    /**
-     * Free native resources when the object is garbage collected.
+     * This method is called automatically when used with try-with-resources.
      */
     @Override
-    protected void finalize() throws Throwable {
-        try {
-            close();
-        } finally {
-            super.finalize();
+    public void close() {
+        if (nativeHandle != 0) {
+            nativeFree(nativeHandle);
+            nativeHandle = 0;
         }
     }
 
@@ -130,4 +120,5 @@ public class GlueSQL {
     private static native long nativeNewJson(String path);
     private static native long nativeNewSharedMemory(String namespace);
     private native String nativeQuery(long handle, String sql) throws GlueSQLException;
+    private static native void nativeFree(long handle);
 }

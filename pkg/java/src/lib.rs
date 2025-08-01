@@ -181,3 +181,15 @@ pub extern "system" fn Java_org_gluesql_GlueSQL_nativeQuery(
         }
     }
 }
+
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_org_gluesql_GlueSQL_nativeFree(
+    _env: JNIEnv,
+    _class: JClass,
+    handle: jlong,
+) {
+    if handle != 0 {
+        let _boxed = unsafe { Box::from_raw(handle as *mut JavaGlue) };
+        // Box is automatically dropped here, freeing the memory
+    }
+}
