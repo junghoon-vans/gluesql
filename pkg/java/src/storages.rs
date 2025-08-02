@@ -3,6 +3,7 @@ use {
     gluesql_memory_storage::MemoryStorage,
     gluesql_shared_memory_storage::SharedMemoryStorage,
     gluesql_sled_storage::SledStorage,
+    gluesql_redb_storage::RedbStorage
 };
 
 use crate::error::GlueSQLError;
@@ -16,11 +17,6 @@ impl JavaMemoryStorage {
     }
 }
 
-impl Default for JavaMemoryStorage {
-    fn default() -> Self {
-        Self::new()
-    }
-}
 
 pub struct JavaJsonStorage(pub JsonStorage);
 
@@ -29,12 +25,6 @@ impl JavaJsonStorage {
         let storage = JsonStorage::new(&path)
             .map_err(|e| GlueSQLError::new(format!("Failed to create JsonStorage: {}", e)))?;
         Ok(JavaJsonStorage(storage))
-    }
-}
-
-impl Default for JavaJsonStorage {
-    fn default() -> Self {
-        Self::new("/tmp".to_string()).unwrap()
     }
 }
 
@@ -48,26 +38,22 @@ impl JavaSledStorage {
     }
 }
 
-impl Default for JavaSledStorage {
-    fn default() -> Self {
-        Self::new("/tmp".to_string()).unwrap()
-    }
-}
-
 #[derive(Clone)]
 pub struct JavaSharedMemoryStorage(pub SharedMemoryStorage);
 
 impl JavaSharedMemoryStorage {
-    pub fn new(_namespace: String) -> Result<Self, GlueSQLError> {
-        // SharedMemoryStorage::new() doesn't take any arguments
-        let storage = SharedMemoryStorage::new();
-        Ok(JavaSharedMemoryStorage(storage))
+    pub fn new() -> Self {
+        JavaSharedMemoryStorage(SharedMemoryStorage::new())
     }
 }
 
-impl Default for JavaSharedMemoryStorage {
-    fn default() -> Self {
-        Self::new("default".to_string()).unwrap()
+pub struct JavaRedbStorage(pub RedbStorage);
+
+impl JavaRedbStorage {
+    pub fn new(path: String) -> Result<Self, GlueSQLError> {
+        let storage = RedbStorage::new(&path)
+            .map_err(|e| GlueSQLError::new(format!("Failed to create RedbStorage: {}", e)))?;
+        Ok(JavaRedbStorage(storage))
     }
 }
 
@@ -76,4 +62,5 @@ pub enum JavaStorageEngine {
     Json(JavaJsonStorage),
     Sled(JavaSledStorage),
     SharedMemory(JavaSharedMemoryStorage),
+    Redb(JavaRedbStorage),
 }

@@ -284,7 +284,7 @@ class GlueSQLTest {
         String sledPath = tempDir.resolve("sled_persistence_" + timestamp).toString();
 
         // Create data in first instance
-        try (GlueSQL db1 = GlueSQL.newSled(sledPath)) {
+        try (GlueSQL db1 = GlueSQL.newRedb(sledPath)) {
             db1.query("CREATE TABLE sled_persistence_test (id INTEGER, value TEXT)");
             db1.query("INSERT INTO sled_persistence_test VALUES (1, 'sled_persistent_data')");
 
@@ -303,9 +303,8 @@ class GlueSQLTest {
     @Test
     @DisplayName("Shared Memory storage - basic operations")
     void testSharedMemoryStorage() throws GlueSQLException {
-        String namespace = "shared_test_" + timestamp;
 
-        try (GlueSQL db = GlueSQL.newSharedMemory(namespace)) {
+        try (GlueSQL db = GlueSQL.newSharedMemory()) {
             String createResult = db.query("CREATE TABLE shared_test (id INTEGER, name TEXT)");
             assertNotNull(createResult);
 
@@ -321,10 +320,9 @@ class GlueSQLTest {
     @Test
     @DisplayName("Shared Memory storage - data sharing between instances")
     void testSharedMemorySharing() throws GlueSQLException {
-        String namespace = "shared_persistence_" + timestamp;
 
         // Create data in first instance
-        try (GlueSQL db1 = GlueSQL.newSharedMemory(namespace)) {
+        try (GlueSQL db1 = GlueSQL.newSharedMemory()) {
             db1.query("CREATE TABLE shared_persistence_test (id INTEGER, value TEXT)");
             db1.query("INSERT INTO shared_persistence_test VALUES (1, 'shared_persistent_data')");
 
@@ -332,7 +330,7 @@ class GlueSQLTest {
             assertTrue(result.contains("shared_persistent_data"));
         }
 
-        try (GlueSQL db2 = GlueSQL.newSharedMemory(namespace)) {
+        try (GlueSQL db2 = GlueSQL.newSharedMemory()) {
             try {
                 String result = db2.query("SELECT * FROM shared_persistence_test");
                 assertNotNull(result);

@@ -64,14 +64,27 @@ public class GlueSQL implements AutoCloseable {
     /**
      * Create a new GlueSQL instance with shared memory storage.
      * 
-     * @param namespace Namespace for the shared memory storage
      * @return GlueSQL instance with shared memory storage
      * @throws GlueSQLException if storage creation fails
      */
-    public static GlueSQL newSharedMemory(String namespace) throws GlueSQLException {
-        long handle = nativeNewSharedMemory(namespace);
+    public static GlueSQL newSharedMemory() throws GlueSQLException {
+        long handle = nativeNewSharedMemory();
         if (handle == 0) {
-            throw new GlueSQLException("Failed to create shared memory storage with namespace: " + namespace);
+            throw new GlueSQLException("Failed to create shared memory storage");
+        }
+        return new GlueSQL(handle);
+    }
+
+    /**
+     * Create a new GlueSQL instance with redb storage.
+     * @param path Path to the Redb database directory
+     * @return GlueSQL instance with Redb storage
+     * @throws GlueSQLException if storage creation fails
+     */
+    public static GlueSQL newRedb(String path) throws GlueSQLException {
+        long handle = nativeNewRedb(path);
+        if (handle == 0) {
+            throw new GlueSQLException("Failed to create Redb storage at path: " + path);
         }
         return new GlueSQL(handle);
     }
@@ -106,7 +119,8 @@ public class GlueSQL implements AutoCloseable {
     private static native long nativeNewMemory();
     private static native long nativeNewSled(String path);
     private static native long nativeNewJson(String path);
-    private static native long nativeNewSharedMemory(String namespace);
+    private static native long nativeNewSharedMemory();
+    private static native long nativeNewRedb(String path);
     private native String nativeQuery(long handle, String sql) throws GlueSQLException;
     private static native void nativeFree(long handle);
 }

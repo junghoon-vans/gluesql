@@ -1412,6 +1412,7 @@ version = "0.17.0"
 dependencies = [
  "gluesql-core",
  "gluesql-json-storage",
+ "gluesql-redb-storage",
  "gluesql-shared-memory-storage",
  "gluesql_memory_storage",
  "gluesql_sled_storage",
