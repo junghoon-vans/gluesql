@@ -2,7 +2,7 @@ use {
     gluesql_core::prelude::{execute, parse, translate},
     jni::{
         JNIEnv,
-        objects::{JClass, JString, JObject},
+        objects::{JClass, JObject, JString},
         sys::{jlong, jstring},
     },
     std::sync::{Arc, Mutex},
@@ -16,8 +16,8 @@ use {
     error::JavaGlueSQLError,
     payload::convert,
     storages::{
-        JavaMemoryStorage, JavaJsonStorage, JavaSledStorage, 
-        JavaSharedMemoryStorage, JavaStorageEngine, JavaRedbStorage
+        JavaJsonStorage, JavaMemoryStorage, JavaRedbStorage, JavaSharedMemoryStorage,
+        JavaSledStorage, JavaStorageEngine,
     },
 };
 
@@ -36,7 +36,7 @@ macro_rules! execute {
 impl JavaGlue {
     pub fn new(storage: JavaStorageEngine) -> Self {
         JavaGlue {
-            storage: Arc::new(Mutex::new(storage))
+            storage: Arc::new(Mutex::new(storage)),
         }
     }
 
@@ -44,33 +44,36 @@ impl JavaGlue {
         tokio::runtime::Runtime::new().unwrap()
     }
 
+    #[allow(clippy::await_holding_lock)]
     pub fn query(&self, sql: String) -> Result<String, JavaGlueSQLError> {
         let rt = Self::runtime();
-        
+
         rt.block_on(async {
-            let queries = parse(&sql)
-                .map_err(|e| JavaGlueSQLError::new(e.to_string()))?;
+            let queries = parse(&sql).map_err(|e| JavaGlueSQLError::new(e.to_string()))?;
 
             let mut payloads = Vec::new();
-            
-            for query in queries.iter() {
-                let statement = translate(query)
-                    .map_err(|e| JavaGlueSQLError::new(e.to_string()))?;
 
-                let mut storage = self.storage.lock().unwrap();
-                let result = match &mut *storage {
-                    JavaStorageEngine::Memory(storage) => execute!(storage, &statement),
-                    JavaStorageEngine::Json(storage) => execute!(storage, &statement),
-                    JavaStorageEngine::Sled(storage) => execute!(storage, &statement),
-                    JavaStorageEngine::SharedMemory(storage) => execute!(storage, &statement),
-                    JavaStorageEngine::Redb(storage) => execute!(storage, &statement),
+            for query in queries.iter() {
+                let statement =
+                    translate(query).map_err(|e| JavaGlueSQLError::new(e.to_string()))?;
+
+                let result = {
+                    let mut storage_guard = self.storage.lock().unwrap();
+                    let storage = &mut *storage_guard;
+                    match storage {
+                        JavaStorageEngine::Memory(s) => execute!(s, &statement),
+                        JavaStorageEngine::Json(s) => execute!(s, &statement),
+                        JavaStorageEngine::Sled(s) => execute!(s, &statement),
+                        JavaStorageEngine::SharedMemory(s) => execute!(s, &statement),
+                        JavaStorageEngine::Redb(s) => execute!(s, &statement),
+                    }
                 };
 
                 match result {
                     Ok(payload) => {
                         payloads.push(payload);
                     }
-                    Err(e) => return Err(JavaGlueSQLError::new(e.to_string()))
+                    Err(e) => return Err(JavaGlueSQLError::new(e.to_string())),
                 }
             }
 
@@ -110,7 +113,7 @@ pub extern "system" fn Java_org_gluesql_GlueSQL_nativeNewSled(
         Ok(jstr) => jstr.into(),
         Err(_) => return 0,
     };
-    
+
     match JavaSledStorage::new(path_str) {
         Ok(storage) => {
             let storage = JavaStorageEngine::Sled(storage);
@@ -174,21 +177,20 @@ pub extern "system" fn Java_org_gluesql_GlueSQL_nativeQuery(
     let sql_str: String = match env.get_string(&sql) {
         Ok(jstr) => jstr.into(),
         Err(_) => {
-            let _ = JavaGlueSQLError::new("Failed to parse SQL string".to_string()).throw_to_java(&mut env);
+            JavaGlueSQLError::new("Failed to parse SQL string".to_string())
+                .throw_to_java(&mut env);
             return JObject::null().into_raw();
         }
     };
-    
+
     match glue.query(sql_str) {
-        Ok(result) => {
-            match env.new_string(result) {
-                Ok(jstr) => jstr.into_raw(),
-                Err(_) => JObject::null().into_raw(),
-            }
-        }
+        Ok(result) => match env.new_string(result) {
+            Ok(jstr) => jstr.into_raw(),
+            Err(_) => JObject::null().into_raw(),
+        },
         Err(e) => {
             e.throw_to_java(&mut env);
-            JObject::null().into_raw()    
+            JObject::null().into_raw()
         }
     }
 }
