@@ -121,6 +121,6 @@ public class GlueSQL implements AutoCloseable {
     private static native long nativeNewSled(String path);
     private static native long nativeNewJson(String path);
     private static native long nativeNewRedb(String path);
-    private native String nativeQuery(long handle, String sql) throws GlueSQLException;
+    private static native String nativeQuery(long handle, String sql) throws GlueSQLException;
     private static native void nativeFree(long handle);
 }

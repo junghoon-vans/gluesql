@@ -6,7 +6,7 @@ use {
     gluesql_redb_storage::RedbStorage
 };
 
-use crate::error::GlueSQLError;
+use crate::error::JavaGlueSQLError;
 
 #[derive(Clone)]
 pub struct JavaMemoryStorage(pub MemoryStorage);
@@ -29,9 +29,9 @@ impl JavaSharedMemoryStorage {
 pub struct JavaJsonStorage(pub JsonStorage);
 
 impl JavaJsonStorage {
-    pub fn new(path: String) -> Result<Self, GlueSQLError> {
+    pub fn new(path: String) -> Result<Self, JavaGlueSQLError> {
         let storage = JsonStorage::new(&path)
-            .map_err(|e| GlueSQLError::new(format!("Failed to create JsonStorage: {}", e)))?;
+            .map_err(|e| JavaGlueSQLError::new(format!("Failed to create JsonStorage: {}", e)))?;
         Ok(JavaJsonStorage(storage))
     }
 }
@@ -39,9 +39,9 @@ impl JavaJsonStorage {
 pub struct JavaSledStorage(pub SledStorage);
 
 impl JavaSledStorage {
-    pub fn new(path: String) -> Result<Self, GlueSQLError> {
+    pub fn new(path: String) -> Result<Self, JavaGlueSQLError> {
         let storage = SledStorage::new(&path)
-            .map_err(|e| GlueSQLError::new(format!("Failed to create SledStorage: {}", e)))?;
+            .map_err(|e| JavaGlueSQLError::new(format!("Failed to create SledStorage: {}", e)))?;
         Ok(JavaSledStorage(storage))
     }
 }
@@ -49,9 +49,9 @@ impl JavaSledStorage {
 pub struct JavaRedbStorage(pub RedbStorage);
 
 impl JavaRedbStorage {
-    pub fn new(path: String) -> Result<Self, GlueSQLError> {
+    pub fn new(path: String) -> Result<Self, JavaGlueSQLError> {
         let storage = RedbStorage::new(&path)
-            .map_err(|e| GlueSQLError::new(format!("Failed to create RedbStorage: {}", e)))?;
+            .map_err(|e| JavaGlueSQLError::new(format!("Failed to create RedbStorage: {}", e)))?;
         Ok(JavaRedbStorage(storage))
     }
 }
