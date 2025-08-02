@@ -13,7 +13,7 @@ mod payload;
 mod storages;
 
 use {
-    error::GlueSQLError,
+    error::JavaGlueSQLError,
     payload::convert,
     storages::{
         JavaMemoryStorage, JavaJsonStorage, JavaSledStorage, 
@@ -29,7 +29,7 @@ macro_rules! execute {
     ($storage:expr, $statements:expr) => {{
         execute(&mut $storage.0, $statements)
             .await
-            .map_err(|e| GlueSQLError::new(e.to_string()))
+            .map_err(|e| JavaGlueSQLError::new(e.to_string()))
     }};
 }
 
@@ -44,18 +44,18 @@ impl JavaGlue {
         tokio::runtime::Runtime::new().unwrap()
     }
 
-    pub fn query(&self, sql: String) -> Result<String, GlueSQLError> {
+    pub fn query(&self, sql: String) -> Result<String, JavaGlueSQLError> {
         let rt = Self::runtime();
         
         rt.block_on(async {
             let queries = parse(&sql)
-                .map_err(|e| GlueSQLError::new(e.to_string()))?;
+                .map_err(|e| JavaGlueSQLError::new(e.to_string()))?;
 
             let mut payloads = Vec::new();
             
             for query in queries.iter() {
                 let statement = translate(query)
-                    .map_err(|e| GlueSQLError::new(e.to_string()))?;
+                    .map_err(|e| JavaGlueSQLError::new(e.to_string()))?;
 
                 let mut storage = self.storage.lock().unwrap();
                 let result = match &mut *storage {
@@ -70,11 +70,11 @@ impl JavaGlue {
                     Ok(payload) => {
                         payloads.push(payload);
                     }
-                    Err(e) => return Err(GlueSQLError::new(e.to_string()))
+                    Err(e) => return Err(JavaGlueSQLError::new(e.to_string()))
                 }
             }
 
-            convert(payloads).map_err(|e| GlueSQLError::new(e.to_string()))
+            convert(payloads).map_err(|e| JavaGlueSQLError::new(e.to_string()))
         })
     }
 }
@@ -174,7 +174,7 @@ pub extern "system" fn Java_org_gluesql_GlueSQL_nativeQuery(
     let sql_str: String = match env.get_string(&sql) {
         Ok(jstr) => jstr.into(),
         Err(_) => {
-            let _ = env.throw_new("org/gluesql/GlueSQLException", "Failed to parse SQL string");
+            let _ = JavaGlueSQLError::new("Failed to parse SQL string".to_string()).throw_to_java(&mut env);
             return JObject::null().into_raw();
         }
     };
@@ -187,8 +187,8 @@ pub extern "system" fn Java_org_gluesql_GlueSQL_nativeQuery(
             }
         }
         Err(e) => {
-            let _ = env.throw_new("org/gluesql/GlueSQLException", e.message);
-            JObject::null().into_raw()
+            e.throw_to_java(&mut env);
+            JObject::null().into_raw()    
         }
     }
 }

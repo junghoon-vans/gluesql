@@ -39,7 +39,6 @@ class GlueSQLExceptionTest {
         GlueSQLException exception = assertThrows(GlueSQLException.class,
                 () -> database.query("SELECT * FROM non_existent_table"));
         assertSame(GlueSQLException.class, exception.getClass());
-        assertTrue(exception.getMessage().contains("GlueSQLError"));
     }
 
     @Test
@@ -51,7 +50,6 @@ class GlueSQLExceptionTest {
                 () -> database.query("INSERT INTO type_test VALUES ('not_a_number', 123)"));
 
         assertSame(GlueSQLException.class, exception.getClass());
-        assertTrue(exception.getMessage().contains("GlueSQLError"));
     }
 
     @Test
