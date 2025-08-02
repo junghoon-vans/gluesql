@@ -22,6 +22,7 @@ gluesql-core.workspace = true
 gluesql_memory_storage.workspace = true
 gluesql_sled_storage.workspace = true
 gluesql-json-storage.workspace = true
+gluesql-redb-storage.workspace = true
 gluesql-shared-memory-storage.workspace = true
 
 jni = "0.21"

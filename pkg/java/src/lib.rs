@@ -17,7 +17,7 @@ use {
     payload::convert,
     storages::{
         JavaMemoryStorage, JavaJsonStorage, JavaSledStorage, 
-        JavaSharedMemoryStorage, JavaStorageEngine,
+        JavaSharedMemoryStorage, JavaStorageEngine, JavaRedbStorage
     },
 };
 
@@ -63,6 +63,7 @@ impl JavaGlue {
                     JavaStorageEngine::Json(storage) => execute!(storage, &statement),
                     JavaStorageEngine::Sled(storage) => execute!(storage, &statement),
                     JavaStorageEngine::SharedMemory(storage) => execute!(storage, &statement),
+                    JavaStorageEngine::Redb(storage) => execute!(storage, &statement),
                 };
 
                 match result {
@@ -120,7 +121,7 @@ pub extern "system" fn Java_org_gluesql_GlueSQL_nativeNewJson(
         Ok(jstr) => jstr.into(),
         Err(_) => return 0,
     };
-    
+
     match JavaJsonStorage::new(path_str) {
         Ok(storage) => {
             let storage = JavaStorageEngine::Json(storage);
@@ -133,18 +134,28 @@ pub extern "system" fn Java_org_gluesql_GlueSQL_nativeNewJson(
 
 #[unsafe(no_mangle)]
 pub extern "system" fn Java_org_gluesql_GlueSQL_nativeNewSharedMemory(
+    _env: JNIEnv,
+    _class: JClass,
+) -> jlong {
+    let storage = JavaStorageEngine::SharedMemory(JavaSharedMemoryStorage::new());
+    let glue = JavaGlue::new(storage);
+    Box::into_raw(Box::new(glue)) as jlong
+}
+
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_org_gluesql_GlueSQL_nativeNewRedb(
     mut env: JNIEnv,
     _class: JClass,
-    namespace: JString,
+    path: JString,
 ) -> jlong {
-    let _namespace_str: String = match env.get_string(&namespace) {
+    let path_str: String = match env.get_string(&path) {
         Ok(jstr) => jstr.into(),
         Err(_) => return 0,
     };
-    
-    match JavaSharedMemoryStorage::new(_namespace_str) {
+
+    match JavaRedbStorage::new(path_str) {
         Ok(storage) => {
-            let storage = JavaStorageEngine::SharedMemory(storage);
+            let storage = JavaStorageEngine::Redb(storage);
             let glue = JavaGlue::new(storage);
             Box::into_raw(Box::new(glue)) as jlong
         }
