@@ -17,6 +17,14 @@ impl JavaMemoryStorage {
     }
 }
 
+#[derive(Clone)]
+pub struct JavaSharedMemoryStorage(pub SharedMemoryStorage);
+
+impl JavaSharedMemoryStorage {
+    pub fn new() -> Self {
+        JavaSharedMemoryStorage(SharedMemoryStorage::new())
+    }
+}
 
 pub struct JavaJsonStorage(pub JsonStorage);
 
@@ -38,15 +46,6 @@ impl JavaSledStorage {
     }
 }
 
-#[derive(Clone)]
-pub struct JavaSharedMemoryStorage(pub SharedMemoryStorage);
-
-impl JavaSharedMemoryStorage {
-    pub fn new() -> Self {
-        JavaSharedMemoryStorage(SharedMemoryStorage::new())
-    }
-}
-
 pub struct JavaRedbStorage(pub RedbStorage);
 
 impl JavaRedbStorage {
@@ -59,8 +58,8 @@ impl JavaRedbStorage {
 
 pub enum JavaStorageEngine {
     Memory(JavaMemoryStorage),
+    SharedMemory(JavaSharedMemoryStorage),
     Json(JavaJsonStorage),
     Sled(JavaSledStorage),
-    SharedMemory(JavaSharedMemoryStorage),
     Redb(JavaRedbStorage),
 }
