@@ -2,7 +2,7 @@ package org.gluesql;
 
 /**
  * GlueSQL Java bindings - Main interface for interacting with GlueSQL database.
- * 
+ * <p>
  * GlueSQL is an open-source SQL database engine written in Rust that supports
  * multiple storage backends and provides SQL query capabilities.
  */
@@ -88,18 +88,6 @@ public class GlueSQL implements AutoCloseable {
             throw new GlueSQLException("Database instance has been closed");
         }
         return nativeQuery(nativeHandle, sql);
-    }
-
-    /**
-     * Executes a SQL query and returns a QueryResult object for easier handling.
-     * 
-     * @param sql SQL query string to execute
-     * @return QueryResult object containing parsed results
-     * @throws GlueSQLException if query execution fails
-     */
-    public QueryResult execute(String sql) throws GlueSQLException {
-        String jsonResult = query(sql);
-        return QueryResult.fromJson(jsonResult);
     }
 
     /**

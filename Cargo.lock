@@ -1410,17 +1410,12 @@ dependencies = [
 name = "gluesql-java"
 version = "0.17.0"
 dependencies = [
- "gluesql-composite-storage",
  "gluesql-core",
- "gluesql-idb-storage",
  "gluesql-json-storage",
  "gluesql-shared-memory-storage",
- "gluesql-test-suite",
- "gluesql-web-storage",
  "gluesql_memory_storage",
  "gluesql_sled_storage",
  "jni",
- "serde",
  "serde_json",
  "tokio",
 ]
