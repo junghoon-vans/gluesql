@@ -3,7 +3,6 @@ use {
     serde_json::{Value as Json, json},
 };
 
-
 pub fn convert(payloads: Vec<Payload>) -> Result<String, serde_json::Error> {
     let payloads: Vec<Json> = payloads.into_iter().map(convert_payload).collect();
     let payloads = Json::Array(payloads);
@@ -21,7 +20,7 @@ fn convert_payload(payload: Payload) -> Json {
                 .map(|values| {
                     let row = labels
                         .iter()
-                        .zip(values.into_iter())
+                        .zip(values)
                         .map(|(label, value)| {
                             let key = label.to_owned();
                             let value = Json::try_from(value).unwrap();

@@ -1,9 +1,7 @@
 use {
-    gluesql_json_storage::JsonStorage,
-    gluesql_memory_storage::MemoryStorage,
-    gluesql_shared_memory_storage::SharedMemoryStorage,
+    gluesql_json_storage::JsonStorage, gluesql_memory_storage::MemoryStorage,
+    gluesql_redb_storage::RedbStorage, gluesql_shared_memory_storage::SharedMemoryStorage,
     gluesql_sled_storage::SledStorage,
-    gluesql_redb_storage::RedbStorage
 };
 
 use crate::error::JavaGlueSQLError;
@@ -17,12 +15,24 @@ impl JavaMemoryStorage {
     }
 }
 
+impl Default for JavaMemoryStorage {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 #[derive(Clone)]
 pub struct JavaSharedMemoryStorage(pub SharedMemoryStorage);
 
 impl JavaSharedMemoryStorage {
     pub fn new() -> Self {
         JavaSharedMemoryStorage(SharedMemoryStorage::new())
+    }
+}
+
+impl Default for JavaSharedMemoryStorage {
+    fn default() -> Self {
+        Self::new()
     }
 }
 
