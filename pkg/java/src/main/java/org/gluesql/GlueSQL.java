@@ -32,6 +32,20 @@ public class GlueSQL implements AutoCloseable {
     }
 
     /**
+     * Create a new GlueSQL instance with shared memory storage.
+     *
+     * @return GlueSQL instance with shared memory storage
+     * @throws GlueSQLException if storage creation fails
+     */
+    public static GlueSQL newSharedMemory() throws GlueSQLException {
+        long handle = nativeNewSharedMemory();
+        if (handle == 0) {
+            throw new GlueSQLException("Failed to create shared memory storage");
+        }
+        return new GlueSQL(handle);
+    }
+
+    /**
      * Create a new GlueSQL instance with Sled storage.
      * 
      * @param path Path to the Sled database directory
@@ -57,20 +71,6 @@ public class GlueSQL implements AutoCloseable {
         long handle = nativeNewJson(path);
         if (handle == 0) {
             throw new GlueSQLException("Failed to create JSON storage at path: " + path);
-        }
-        return new GlueSQL(handle);
-    }
-
-    /**
-     * Create a new GlueSQL instance with shared memory storage.
-     * 
-     * @return GlueSQL instance with shared memory storage
-     * @throws GlueSQLException if storage creation fails
-     */
-    public static GlueSQL newSharedMemory() throws GlueSQLException {
-        long handle = nativeNewSharedMemory();
-        if (handle == 0) {
-            throw new GlueSQLException("Failed to create shared memory storage");
         }
         return new GlueSQL(handle);
     }
@@ -117,9 +117,9 @@ public class GlueSQL implements AutoCloseable {
 
     // Native method declarations
     private static native long nativeNewMemory();
+    private static native long nativeNewSharedMemory();
     private static native long nativeNewSled(String path);
     private static native long nativeNewJson(String path);
-    private static native long nativeNewSharedMemory();
     private static native long nativeNewRedb(String path);
     private native String nativeQuery(long handle, String sql) throws GlueSQLException;
     private static native void nativeFree(long handle);

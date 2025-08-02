@@ -91,6 +91,16 @@ pub extern "system" fn Java_org_gluesql_GlueSQL_nativeNewMemory(
 }
 
 #[unsafe(no_mangle)]
+pub extern "system" fn Java_org_gluesql_GlueSQL_nativeNewSharedMemory(
+    _env: JNIEnv,
+    _class: JClass,
+) -> jlong {
+    let storage = JavaStorageEngine::SharedMemory(JavaSharedMemoryStorage::new());
+    let glue = JavaGlue::new(storage);
+    Box::into_raw(Box::new(glue)) as jlong
+}
+
+#[unsafe(no_mangle)]
 pub extern "system" fn Java_org_gluesql_GlueSQL_nativeNewSled(
     mut env: JNIEnv,
     _class: JClass,
@@ -130,16 +140,6 @@ pub extern "system" fn Java_org_gluesql_GlueSQL_nativeNewJson(
         }
         Err(_) => 0,
     }
-}
-
-#[unsafe(no_mangle)]
-pub extern "system" fn Java_org_gluesql_GlueSQL_nativeNewSharedMemory(
-    _env: JNIEnv,
-    _class: JClass,
-) -> jlong {
-    let storage = JavaStorageEngine::SharedMemory(JavaSharedMemoryStorage::new());
-    let glue = JavaGlue::new(storage);
-    Box::into_raw(Box::new(glue)) as jlong
 }
 
 #[unsafe(no_mangle)]
