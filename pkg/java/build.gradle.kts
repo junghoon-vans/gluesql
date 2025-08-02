@@ -15,10 +15,13 @@ repositories {
     mavenCentral()
 }
 
+val jacksonVersion = "2.19.2"
+val junitVersion = "5.10.2"
+
 dependencies {
-    implementation("com.fasterxml.jackson.core:jackson-databind:2.19.2")
+    implementation("com.fasterxml.jackson.core:jackson-databind:$jacksonVersion")
     
-    testImplementation("org.junit.jupiter:junit-jupiter:5.10.2")
+    testImplementation("org.junit.jupiter:junit-jupiter:$junitVersion")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 }
 
