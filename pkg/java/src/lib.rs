@@ -5,7 +5,7 @@ use {
         objects::{JClass, JObject, JString},
         sys::{jlong, jstring},
     },
-    std::sync::{Arc, Mutex},
+    std::sync::{Arc, RwLock},
 };
 
 mod error;
@@ -22,7 +22,7 @@ use {
 };
 
 pub struct JavaGlue {
-    pub storage: Arc<Mutex<JavaStorageEngine>>,
+    pub storage: Arc<RwLock<JavaStorageEngine>>,
 }
 
 macro_rules! execute {
@@ -36,17 +36,17 @@ macro_rules! execute {
 impl JavaGlue {
     pub fn new(storage: JavaStorageEngine) -> Self {
         JavaGlue {
-            storage: Arc::new(Mutex::new(storage)),
+            storage: Arc::new(RwLock::new(storage)),
         }
     }
 
-    fn runtime() -> tokio::runtime::Runtime {
-        tokio::runtime::Runtime::new().unwrap()
+    fn runtime() -> Result<tokio::runtime::Runtime, JavaGlueSQLError> {
+        tokio::runtime::Runtime::new()
+            .map_err(|e| JavaGlueSQLError::new(format!("Failed to create runtime: {}", e)))
     }
 
-    #[allow(clippy::await_holding_lock)]
     pub fn query(&self, sql: String) -> Result<String, JavaGlueSQLError> {
-        let rt = Self::runtime();
+        let rt = Self::runtime()?;
 
         rt.block_on(async {
             let queries = parse(&sql).map_err(|e| JavaGlueSQLError::new(e.to_string()))?;
@@ -58,7 +58,7 @@ impl JavaGlue {
                     translate(query).map_err(|e| JavaGlueSQLError::new(e.to_string()))?;
 
                 let result = {
-                    let mut storage_guard = self.storage.lock().unwrap();
+                    let mut storage_guard = self.storage.write().unwrap();
                     let storage = &mut *storage_guard;
                     match storage {
                         JavaStorageEngine::Memory(s) => execute!(s, &statement),
@@ -80,6 +80,16 @@ impl JavaGlue {
             convert(payloads).map_err(|e| JavaGlueSQLError::new(e.to_string()))
         })
     }
+}
+
+
+fn handle_jstring_error(env: &mut JNIEnv) -> jstring {
+    JavaGlueSQLError::new("Failed to parse string parameter".to_string()).throw_to_java(env);
+    JObject::null().into_raw()
+}
+
+fn handle_storage_creation_error() -> jlong {
+    0
 }
 
 // JNI exports
@@ -111,7 +121,7 @@ pub extern "system" fn Java_org_gluesql_GlueSQL_nativeNewSled(
 ) -> jlong {
     let path_str: String = match env.get_string(&path) {
         Ok(jstr) => jstr.into(),
-        Err(_) => return 0,
+        Err(_) => return handle_storage_creation_error(),
     };
 
     match JavaSledStorage::new(path_str) {
@@ -120,7 +130,7 @@ pub extern "system" fn Java_org_gluesql_GlueSQL_nativeNewSled(
             let glue = JavaGlue::new(storage);
             Box::into_raw(Box::new(glue)) as jlong
         }
-        Err(_) => 0,
+        Err(_) => handle_storage_creation_error(),
     }
 }
 
@@ -132,7 +142,7 @@ pub extern "system" fn Java_org_gluesql_GlueSQL_nativeNewJson(
 ) -> jlong {
     let path_str: String = match env.get_string(&path) {
         Ok(jstr) => jstr.into(),
-        Err(_) => return 0,
+        Err(_) => return handle_storage_creation_error(),
     };
 
     match JavaJsonStorage::new(path_str) {
@@ -141,7 +151,7 @@ pub extern "system" fn Java_org_gluesql_GlueSQL_nativeNewJson(
             let glue = JavaGlue::new(storage);
             Box::into_raw(Box::new(glue)) as jlong
         }
-        Err(_) => 0,
+        Err(_) => handle_storage_creation_error(),
     }
 }
 
@@ -153,7 +163,7 @@ pub extern "system" fn Java_org_gluesql_GlueSQL_nativeNewRedb(
 ) -> jlong {
     let path_str: String = match env.get_string(&path) {
         Ok(jstr) => jstr.into(),
-        Err(_) => return 0,
+        Err(_) => return handle_storage_creation_error(),
     };
 
     match JavaRedbStorage::new(path_str) {
@@ -162,7 +172,7 @@ pub extern "system" fn Java_org_gluesql_GlueSQL_nativeNewRedb(
             let glue = JavaGlue::new(storage);
             Box::into_raw(Box::new(glue)) as jlong
         }
-        Err(_) => 0,
+        Err(_) => handle_storage_creation_error(),
     }
 }
 
@@ -173,14 +183,12 @@ pub extern "system" fn Java_org_gluesql_GlueSQL_nativeQuery(
     handle: jlong,
     sql: JString,
 ) -> jstring {
+    // SAFETY: handle is guaranteed to be a valid pointer to JavaGlue
+    // that was created by one of the nativeNew* functions and not yet freed
     let glue = unsafe { &*(handle as *mut JavaGlue) };
     let sql_str: String = match env.get_string(&sql) {
         Ok(jstr) => jstr.into(),
-        Err(_) => {
-            JavaGlueSQLError::new("Failed to parse SQL string".to_string())
-                .throw_to_java(&mut env);
-            return JObject::null().into_raw();
-        }
+        Err(_) => return handle_jstring_error(&mut env),
     };
 
     match glue.query(sql_str) {
@@ -202,6 +210,8 @@ pub extern "system" fn Java_org_gluesql_GlueSQL_nativeFree(
     handle: jlong,
 ) {
     if handle != 0 {
+        // SAFETY: handle is guaranteed to be a valid pointer to JavaGlue
+        // that was created by one of the nativeNew* functions
         let _boxed = unsafe { Box::from_raw(handle as *mut JavaGlue) };
         // Box is automatically dropped here, freeing the memory
     }
