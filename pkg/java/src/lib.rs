@@ -6,6 +6,7 @@ use {
         sys::{jlong, jstring},
     },
     std::sync::{Arc, RwLock},
+    tokio::runtime::Runtime,
 };
 
 mod error;
@@ -23,6 +24,7 @@ use {
 
 pub struct JavaGlue {
     pub storage: Arc<RwLock<JavaStorageEngine>>,
+    pub runtime: Arc<Runtime>,
 }
 
 macro_rules! execute {
@@ -35,20 +37,15 @@ macro_rules! execute {
 
 impl JavaGlue {
     pub fn new(storage: JavaStorageEngine) -> Self {
+        let runtime = Runtime::new().expect("Failed to create Tokio runtime");
         JavaGlue {
             storage: Arc::new(RwLock::new(storage)),
+            runtime: Arc::new(runtime),
         }
     }
 
-    fn runtime() -> Result<tokio::runtime::Runtime, JavaGlueSQLError> {
-        tokio::runtime::Runtime::new()
-            .map_err(|e| JavaGlueSQLError::new(format!("Failed to create runtime: {}", e)))
-    }
-
     pub fn query(&self, sql: String) -> Result<String, JavaGlueSQLError> {
-        let rt = Self::runtime()?;
-
-        rt.block_on(async {
+        self.runtime.block_on(async {
             let queries = parse(&sql).map_err(|e| JavaGlueSQLError::new(e.to_string()))?;
 
             let mut payloads = Vec::new();
