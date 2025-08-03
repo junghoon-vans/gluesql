@@ -3,6 +3,9 @@ package org.gluesql;
 import static org.junit.jupiter.api.Assertions.*;
 
 import java.nio.file.Path;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ForkJoinPool;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.TestInstance;
@@ -235,6 +238,53 @@ class GlueSQLTest {
             String limitResult = database.query("SELECT * FROM multi_row_test LIMIT 2");
             assertNotNull(limitResult, "LIMIT should work for " + storageName);
             assertTrue(limitResult.contains("value_"), "Should contain data for " + storageName);
+        }
+    }
+
+    @ParameterizedTest
+    @MethodSource("databaseProvider")
+    @DisplayName("Async query with default thread pool")
+    void testAsyncQueryDefault(GlueSQL database, String storageName) throws ExecutionException, InterruptedException, GlueSQLException {
+        try (database) {
+            // Setup test data
+            database.query("CREATE TABLE async_test (id INTEGER, value TEXT)");
+            database.query("INSERT INTO async_test VALUES (1, 'async_value')");
+
+            // Test async query with default thread pool
+            CompletableFuture<String> future = database.queryAsync("SELECT * FROM async_test");
+            
+            assertNotNull(future, "Future should not be null for " + storageName);
+            
+            String result = future.get(); // Wait for completion
+            
+            assertNotNull(result, "Async result should not be null for " + storageName);
+            assertTrue(result.contains("async_value"), "Should contain test data for " + storageName);
+        }
+    }
+
+    @ParameterizedTest
+    @MethodSource("databaseProvider")
+    @DisplayName("Async query with custom thread pool")
+    void testAsyncQueryCustomExecutor(GlueSQL database, String storageName) throws ExecutionException, InterruptedException, GlueSQLException {
+        try (database) {
+            // Setup test data
+            database.query("CREATE TABLE async_custom_test (id INTEGER, value TEXT)");
+            database.query("INSERT INTO async_custom_test VALUES (1, 'custom_async_value')");
+
+            // Test async query with custom executor
+            ForkJoinPool customPool = new ForkJoinPool(2);
+            try {
+                CompletableFuture<String> future = database.queryAsync("SELECT * FROM async_custom_test", customPool);
+                
+                assertNotNull(future, "Future should not be null for " + storageName);
+                
+                String result = future.get(); // Wait for completion
+                
+                assertNotNull(result, "Async result should not be null for " + storageName);
+                assertTrue(result.contains("custom_async_value"), "Should contain test data for " + storageName);
+            } finally {
+                customPool.shutdown();
+            }
         }
     }
 }
