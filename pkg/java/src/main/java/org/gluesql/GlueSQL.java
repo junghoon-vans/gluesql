@@ -107,39 +107,34 @@ public class GlueSQL implements AutoCloseable {
 
     /**
      * Execute a SQL query asynchronously and return a CompletableFuture with the results.
-     * <p>
-     * This method allows non-blocking query execution, similar to JavaScript Promises.
-     * The query is executed on the common ForkJoinPool.
      * 
      * @param sql SQL query string to execute
      * @return CompletableFuture that will contain the JSON string results
      */
     public CompletableFuture<String> queryAsync(String sql) {
-        return CompletableFuture.supplyAsync(() -> {
-            try {
-                return query(sql);
-            } catch (GlueSQLException e) {
-                throw new RuntimeException(e);
+        if (nativeHandle == 0) {
+            CompletableFuture<String> future = new CompletableFuture<>();
+            future.completeExceptionally(new GlueSQLException("Database instance has been closed"));
+            return future;
+        }
+
+        CompletableFuture<String> future = new CompletableFuture<>();
+        
+        nativeQueryAsync(nativeHandle, sql, new QueryCallback() {
+            @Override
+            public void onSuccess(String result) {
+                future.complete(result);
+            }
+            
+            @Override
+            public void onError(String error) {
+                future.completeExceptionally(new GlueSQLException(error));
             }
         });
+        
+        return future;
     }
 
-    /**
-     * Execute a SQL query asynchronously on a custom thread pool.
-     * 
-     * @param sql SQL query string to execute
-     * @param executor Custom executor for running the query
-     * @return CompletableFuture that will contain the JSON string results
-     */
-    public CompletableFuture<String> queryAsync(String sql, java.util.concurrent.Executor executor) {
-        return CompletableFuture.supplyAsync(() -> {
-            try {
-                return query(sql);
-            } catch (GlueSQLException e) {
-                throw new RuntimeException(e);
-            }
-        }, executor);
-    }
     /**
      * Close the database and free native resources.
      * This method is called automatically when used with try-with-resources.
@@ -159,5 +154,6 @@ public class GlueSQL implements AutoCloseable {
     private static native long nativeNewJson(String path);
     private static native long nativeNewRedb(String path);
     private static native String nativeQuery(long handle, String sql) throws GlueSQLException;
+    private static native void nativeQueryAsync(long handle, String sql, QueryCallback callback);
     private static native void nativeFree(long handle);
 }
