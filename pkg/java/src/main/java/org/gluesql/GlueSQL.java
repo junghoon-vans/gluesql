@@ -1,5 +1,7 @@
 package org.gluesql;
 
+import java.util.concurrent.CompletableFuture;
+
 /**
  * GlueSQL Java bindings - Main interface for interacting with GlueSQL database.
  * <p>
@@ -103,6 +105,41 @@ public class GlueSQL implements AutoCloseable {
         return nativeQuery(nativeHandle, sql);
     }
 
+    /**
+     * Execute a SQL query asynchronously and return a CompletableFuture with the results.
+     * <p>
+     * This method allows non-blocking query execution, similar to JavaScript Promises.
+     * The query is executed on the common ForkJoinPool.
+     * 
+     * @param sql SQL query string to execute
+     * @return CompletableFuture that will contain the JSON string results
+     */
+    public CompletableFuture<String> queryAsync(String sql) {
+        return CompletableFuture.supplyAsync(() -> {
+            try {
+                return query(sql);
+            } catch (GlueSQLException e) {
+                throw new RuntimeException(e);
+            }
+        });
+    }
+
+    /**
+     * Execute a SQL query asynchronously on a custom thread pool.
+     * 
+     * @param sql SQL query string to execute
+     * @param executor Custom executor for running the query
+     * @return CompletableFuture that will contain the JSON string results
+     */
+    public CompletableFuture<String> queryAsync(String sql, java.util.concurrent.Executor executor) {
+        return CompletableFuture.supplyAsync(() -> {
+            try {
+                return query(sql);
+            } catch (GlueSQLException e) {
+                throw new RuntimeException(e);
+            }
+        }, executor);
+    }
     /**
      * Close the database and free native resources.
      * This method is called automatically when used with try-with-resources.
