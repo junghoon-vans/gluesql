@@ -1,0 +1,74 @@
+name: Java
+
+on:
+  push:
+    branches: [main, release-*]
+    paths-ignore:
+      - 'docs/**'
+  pull_request:
+    paths-ignore:
+      - 'docs/**'
+
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        java-version: [17]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK ${{ matrix.java-version }}
+        uses: actions/setup-java@v4
+        with:
+          java-version: ${{ matrix.java-version }}
+          distribution: 'temurin'
+
+      - name: Set up Gradle with cache
+        uses: gradle/gradle-build-action@v3
+        with:
+          gradle-version: wrapper
+
+      - name: Get Rust version
+        id: rust-version
+        run: echo "version=$(rustc --version | awk '{print $2}')" >> $GITHUB_OUTPUT
+
+      - name: Set up Rust toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          override: true
+
+      - name: Cache Cargo dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            pkg/java/target
+          key: ${{ runner.os }}-cargo-java-${{ steps.rust-version.outputs.version }}-${{ hashFiles('pkg/java/Cargo.toml', 'Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-java-${{ steps.rust-version.outputs.version }}-
+            ${{ runner.os }}-cargo-java-
+
+      - name: Build native library
+        working-directory: pkg/java
+        run: cargo build --release --target-dir target/native
+
+      - name: Make gradlew executable
+        working-directory: pkg/java
+        run: chmod +x gradlew
+
+      - name: Run check (tests and static analysis)
+        working-directory: pkg/java
+        run: ./gradlew check
+
+      - name: Upload test reports (only on failure)
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: java-test-reports
+          path: pkg/java/build/reports/tests/test
