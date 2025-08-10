@@ -160,7 +160,7 @@ public class GlueSQL implements AutoCloseable {
         }
     }
 
-    // Native method declarations
+    // region JNI methods declarations
     private static native long nativeNewMemory();
 
     private static native long nativeNewSharedMemory();
@@ -174,4 +174,5 @@ public class GlueSQL implements AutoCloseable {
     private static native void nativeQueryAsync(long handle, String sql, QueryCallback callback);
 
     private static native void nativeFree(long handle);
+    // endregion
 }
