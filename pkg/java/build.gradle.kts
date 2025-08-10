@@ -1,6 +1,7 @@
 plugins {
     `java-library`
     `maven-publish`
+    id("com.diffplug.spotless") version "6.25.0"
 }
 
 group = "org.gluesql"
@@ -84,6 +85,15 @@ tasks.jar {
             "Implementation-Version" to project.version,
             "Implementation-Vendor" to "GlueSQL"
         )
+    }
+}
+
+spotless {
+    java {
+       palantirJavaFormat()
+       removeUnusedImports()
+       trimTrailingWhitespace()
+       endWithNewline()
     }
 }
 

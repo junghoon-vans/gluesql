@@ -8,8 +8,9 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 /**
- * Tests for GlueSQLException handling, particularly focusing on exceptions thrown from Rust native code and proper Java
- * exception propagation. Tests cover SQL syntax errors, runtime errors, and resource management failures.
+ * Tests for GlueSQLException handling, particularly focusing on exceptions thrown from Rust native
+ * code and proper Java exception propagation. Tests cover SQL syntax errors, runtime errors, and
+ * resource management failures.
  */
 class GlueSQLExceptionTest {
 
@@ -36,8 +37,8 @@ class GlueSQLExceptionTest {
     @Test
     @DisplayName("Table not found error")
     void testTableNotFound() {
-        GlueSQLException exception = assertThrows(GlueSQLException.class,
-                () -> database.query("SELECT * FROM non_existent_table"));
+        GlueSQLException exception =
+                assertThrows(GlueSQLException.class, () -> database.query("SELECT * FROM non_existent_table"));
         assertSame(GlueSQLException.class, exception.getClass());
     }
 
@@ -46,8 +47,8 @@ class GlueSQLExceptionTest {
     void testTypeMismatch() throws GlueSQLException {
         database.query("CREATE TABLE type_test (id INTEGER, name TEXT)");
 
-        GlueSQLException exception = assertThrows(GlueSQLException.class,
-                () -> database.query("INSERT INTO type_test VALUES ('not_a_number', 123)"));
+        GlueSQLException exception = assertThrows(
+                GlueSQLException.class, () -> database.query("INSERT INTO type_test VALUES ('not_a_number', 123)"));
 
         assertSame(GlueSQLException.class, exception.getClass());
     }
