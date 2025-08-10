@@ -1,6 +1,7 @@
 package org.gluesql;
 
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
 
 /**
  * GlueSQL Java bindings - Main interface for interacting with GlueSQL database.
@@ -93,16 +94,27 @@ public class GlueSQL implements AutoCloseable {
 
     /**
      * Execute a SQL query and return the results as JSON string.
+     * <p>
+     * This method blocks until the query completes. Internally, it uses the async 
+     * implementation and waits for the result, providing a simple synchronous interface.
      * 
      * @param sql SQL query string to execute
      * @return JSON string containing query results
      * @throws GlueSQLException if query execution fails
      */
     public String query(String sql) throws GlueSQLException {
-        if (nativeHandle == 0) {
-            throw new GlueSQLException("Database instance has been closed");
+        try {
+            return queryAsync(sql).get();
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new GlueSQLException("Query was interrupted: " + e.getMessage());
+        } catch (ExecutionException e) {
+            Throwable cause = e.getCause();
+            if (cause instanceof GlueSQLException) {
+                throw (GlueSQLException) cause;
+            }
+            throw new GlueSQLException("Query execution failed: " + cause.getMessage());
         }
-        return nativeQuery(nativeHandle, sql);
     }
 
     /**
@@ -153,7 +165,6 @@ public class GlueSQL implements AutoCloseable {
     private static native long nativeNewSled(String path);
     private static native long nativeNewJson(String path);
     private static native long nativeNewRedb(String path);
-    private static native String nativeQuery(long handle, String sql) throws GlueSQLException;
     private static native void nativeQueryAsync(long handle, String sql, QueryCallback callback);
     private static native void nativeFree(long handle);
 }
