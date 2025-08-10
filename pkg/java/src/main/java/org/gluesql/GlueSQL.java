@@ -110,8 +110,8 @@ public class GlueSQL implements AutoCloseable {
             throw new GlueSQLException("Query was interrupted: " + e.getMessage());
         } catch (ExecutionException e) {
             Throwable cause = e.getCause();
-            if (cause instanceof GlueSQLException) {
-                throw (GlueSQLException) cause;
+            if (cause instanceof GlueSQLException glueSQLExceptionCause) {
+                throw glueSQLExceptionCause;
             }
             throw new GlueSQLException("Query execution failed: " + cause.getMessage());
         }
