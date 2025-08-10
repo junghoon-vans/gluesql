@@ -5,12 +5,12 @@ import java.util.concurrent.ExecutionException;
 
 /**
  * GlueSQL Java bindings - Main interface for interacting with GlueSQL database.
- * <p>
- * GlueSQL is an open-source SQL database engine written in Rust that supports
- * multiple storage backends and provides SQL query capabilities.
+ *
+ * <p>GlueSQL is an open-source SQL database engine written in Rust that supports multiple storage
+ * backends and provides SQL query capabilities.
  */
 public class GlueSQL implements AutoCloseable {
-    
+
     static {
         System.loadLibrary("gluesql_java");
     }
@@ -23,7 +23,7 @@ public class GlueSQL implements AutoCloseable {
 
     /**
      * Create a new GlueSQL instance with in-memory storage.
-     * 
+     *
      * @return GlueSQL instance with memory storage
      */
     public static GlueSQL newMemory() throws GlueSQLException {
@@ -50,7 +50,7 @@ public class GlueSQL implements AutoCloseable {
 
     /**
      * Create a new GlueSQL instance with Sled storage.
-     * 
+     *
      * @param path Path to the Sled database directory
      * @return GlueSQL instance with Sled storage
      * @throws GlueSQLException if storage creation fails
@@ -65,7 +65,7 @@ public class GlueSQL implements AutoCloseable {
 
     /**
      * Create a new GlueSQL instance with JSON storage.
-     * 
+     *
      * @param path Path to the JSON storage directory
      * @return GlueSQL instance with JSON storage
      * @throws GlueSQLException if storage creation fails
@@ -80,6 +80,7 @@ public class GlueSQL implements AutoCloseable {
 
     /**
      * Create a new GlueSQL instance with redb storage.
+     *
      * @param path Path to the Redb database directory
      * @return GlueSQL instance with Redb storage
      * @throws GlueSQLException if storage creation fails
@@ -94,10 +95,10 @@ public class GlueSQL implements AutoCloseable {
 
     /**
      * Execute a SQL query and return the results as JSON string.
-     * <p>
-     * This method blocks until the query completes. Internally, it uses the async 
-     * implementation and waits for the result, providing a simple synchronous interface.
-     * 
+     *
+     * <p>This method blocks until the query completes. Internally, it uses the async implementation
+     * and waits for the result, providing a simple synchronous interface.
+     *
      * @param sql SQL query string to execute
      * @return JSON string containing query results
      * @throws GlueSQLException if query execution fails
@@ -119,7 +120,7 @@ public class GlueSQL implements AutoCloseable {
 
     /**
      * Execute a SQL query asynchronously and return a CompletableFuture with the results.
-     * 
+     *
      * @param sql SQL query string to execute
      * @return CompletableFuture that will contain the JSON string results
      */
@@ -131,25 +132,25 @@ public class GlueSQL implements AutoCloseable {
         }
 
         CompletableFuture<String> future = new CompletableFuture<>();
-        
+
         nativeQueryAsync(nativeHandle, sql, new QueryCallback() {
             @Override
             public void onSuccess(String result) {
                 future.complete(result);
             }
-            
+
             @Override
             public void onError(String error) {
                 future.completeExceptionally(new GlueSQLException(error));
             }
         });
-        
+
         return future;
     }
 
     /**
-     * Close the database and free native resources.
-     * This method is called automatically when used with try-with-resources.
+     * Close the database and free native resources. This method is called automatically when used
+     * with try-with-resources.
      */
     @Override
     public void close() {
@@ -161,10 +162,16 @@ public class GlueSQL implements AutoCloseable {
 
     // Native method declarations
     private static native long nativeNewMemory();
+
     private static native long nativeNewSharedMemory();
+
     private static native long nativeNewSled(String path);
+
     private static native long nativeNewJson(String path);
+
     private static native long nativeNewRedb(String path);
+
     private static native void nativeQueryAsync(long handle, String sql, QueryCallback callback);
+
     private static native void nativeFree(long handle);
 }
