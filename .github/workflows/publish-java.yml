@@ -1,0 +1,86 @@
+name: Package Java
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build-native:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            lib: libgluesql_java.so
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+            lib: gluesql_java.dll
+          - os: macos-latest
+            target: x86_64-apple-darwin
+            lib: libgluesql_java.dylib
+          - os: macos-latest
+            target: aarch64-apple-darwin
+            lib: libgluesql_java.dylib
+    
+    steps:
+    - uses: actions/checkout@v4
+    - uses: dtolnay/rust-toolchain@stable
+
+    - name: Add Rust target
+      run: rustup target add ${{ matrix.target }}
+
+    - name: Build native library
+      working-directory: pkg/java
+      run: cargo build --release --target ${{ matrix.target }}
+    
+    - name: Upload native library
+      uses: actions/upload-artifact@v4
+      if: success()  # Only upload if build succeeded
+      with:
+        name: native-${{ matrix.os }}-${{ matrix.target }}
+        path: pkg/java/target/native/release/${{ matrix.lib }}
+
+  package:
+    runs-on: ubuntu-latest
+    needs: build-native
+    
+    steps:
+    - uses: actions/checkout@v4
+    - uses: actions/setup-java@v4
+      with:
+        java-version: '17'
+        distribution: 'temurin'
+    
+    - name: Download all native libraries
+      uses: actions/download-artifact@v4
+      with:
+        pattern: native-*
+        path: native-libs/
+    
+    - name: Copy native libraries to resources
+      working-directory: pkg/java
+      run: |
+        mkdir -p src/main/resources/native/release
+        
+        # Copy all native libraries to the release directory
+        find ../native-libs -name "*.so" -o -name "*.dll" -o -name "*.dylib" | while read lib; do
+          echo "Copying $lib"
+          cp "$lib" src/main/resources/native/release/
+        done
+        
+        echo "Native libraries in JAR:"
+        ls -la src/main/resources/native/release/
+    
+    - name: Build JAR
+      working-directory: pkg/java
+      run: |
+        chmod +x gradlew
+        ./gradlew build -x test
+    
+    - name: Upload JAR
+      uses: actions/upload-artifact@v4
+      with:
+        name: gluesql-java-multiplatform
+        path: pkg/java/build/libs/*.jar
+
+    # TODO: Add publishing to Maven Central

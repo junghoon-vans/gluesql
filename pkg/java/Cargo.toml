@@ -1,0 +1,31 @@
+[package]
+name = "gluesql-java"
+authors = [
+    "Junghoon Ban <junghoon.ban@gmail.com>",
+]
+version.workspace = true
+edition.workspace = true
+description.workspace = true
+license.workspace = true
+repository.workspace = true
+documentation.workspace = true
+
+[lib]
+name = "gluesql_java"
+crate-type = ["cdylib"]
+
+[features]
+default = []
+
+[dependencies]
+gluesql-core.workspace = true
+gluesql_memory_storage.workspace = true
+gluesql_sled_storage.workspace = true
+gluesql-json-storage.workspace = true
+gluesql-redb-storage.workspace = true
+gluesql-shared-memory-storage.workspace = true
+
+jni = "0.21"
+serde_json = "1"
+tokio = { version = "1", features = ["rt", "rt-multi-thread", "macros"] }
+
